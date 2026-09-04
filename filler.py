@@ -9,7 +9,7 @@ FIELD TYPE MAPPING
   Google type 1  -> "long"     -> random paragraph
   Google type 2  -> "radio"    -> pick ONE random option
   Google type 4  -> "checkbox" -> pick 1..n random options (all eligible)
-  Google type 5  -> "dropdown" -> pick ONE random option
+  Google type 5  -> "dropdown" -> pick ONE random option from the list
   Heuristic: if the question title contains "first" + "name"
              the field is treated as "first_name" -> random first name.
   Heuristic: if the question title contains "last"/"sur" + "name"
@@ -112,6 +112,7 @@ def fake_email(first_name, last_name):
 _GTYPE_SHORT    = 0
 _GTYPE_LONG     = 1
 _GTYPE_RADIO    = 2
+_GTYPE_SCALE    = 3   # linear scale / multiple-choice grid — pick one option
 _GTYPE_CHECKBOX = 4
 _GTYPE_DROPDOWN = 5
 
@@ -156,14 +157,22 @@ def scrape_form(viewform_url):
             raw_options = q[4][0][1] or []
             options = [o[0] for o in raw_options if o and o[0]]
 
-            if g_type in (_GTYPE_RADIO, _GTYPE_DROPDOWN):
+            if g_type in (_GTYPE_RADIO, _GTYPE_SCALE):
                 field_type = "radio"
+            elif g_type == _GTYPE_DROPDOWN:
+                field_type = "dropdown"
             elif g_type == _GTYPE_CHECKBOX:
                 field_type = "checkbox"
             elif g_type == _GTYPE_LONG:
                 field_type = "long"
             else:
                 field_type = "short"
+
+            # Safety net: if an unknown type slipped through but the field has
+            # predefined options, treat it as "radio" so we pick a valid choice
+            # instead of sending free text and getting a 400.
+            if field_type in ("short", "long") and options:
+                field_type = "radio"
 
             title_lower = q_title.lower()
 
@@ -239,6 +248,10 @@ def build_payload(fields):
             payload.append((entry_key, random.choice(LONG_PARAGRAPHS)))
 
         elif ftype == "radio":
+            if options:
+                payload.append((entry_key, random.choice(options)))
+
+        elif ftype == "dropdown":
             if options:
                 payload.append((entry_key, random.choice(options)))
 
