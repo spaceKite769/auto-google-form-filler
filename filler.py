@@ -86,22 +86,52 @@ def fake_name():
 
 def fake_email(first_name, last_name):
     """
-    Build a plausible email from first + last name chosen for this submission.
-    Examples for 'Riya Singh':
-      riya.singh@gmail.com
-      riyasingh42@yahoo.com
-      r.singh91@outlook.com
-      riya_singh@hotmail.com
+    Build a realistic-looking email from first + last name.
+
+    Rules applied:
+      - Only alphanumeric chars (no underscores, no dots as main separator)
+      - Numbers are always included to look natural
+      - Mix of first-last and last-first orderings
+      - Initials (1-2 chars) combined with the other name + digits
+      - A dot separator used only ~15% of the time, never underscore
+      - Numbers chosen to resemble birth years or short random suffixes
+
+    Examples for 'Arjun Mehta':
+      ajmehta2003@gmail.com
+      mehtaarj97@yahoo.com
+      amehta2847@gmail.com
+      arjun2004me@outlook.com
     """
     f = _normalize(first_name)
     l = _normalize(last_name)
-    n = random.randint(1, 999)
+
+    # Numbers that look natural: birth-year, 2-digit, or longer suffix
+    num = random.choice([
+        str(random.randint(1990, 2005)),
+        str(random.randint(10, 99)),
+        str(random.randint(100, 9999)),
+    ])
+
+    f1 = f[0]
+    f2 = f[:2] if len(f) >= 2 else f
+    l1 = l[0]
+    l2 = l[:2] if len(l) >= 2 else l
+
     domain = random.choice(EMAIL_DOMAINS)
+
+    # Dot used rarely (~15% chance), never underscore
+    def _sep():
+        return "." if random.random() < 0.15 else ""
+
     templates = [
-        "{}.{}@{}".format(f, l, domain),
-        "{}{}{}@{}".format(f, l, n, domain),
-        "{}.{}{}@{}".format(f[0], l, n, domain),
-        "{}_{}@{}".format(f, l, domain),
+        "{}{}{}{}@{}".format(f2, l, _sep(), num, domain),   # ajmehta2003
+        "{}{}{}{}@{}".format(l, f2, _sep(), num, domain),   # mehtaaj97
+        "{}{}{}{}@{}".format(l, _sep(), f, num, domain),    # mehta.arjun2003
+        "{}{}{}@{}".format(f1, l, num, domain),             # amehta2847
+        "{}{}{}@{}".format(l1, f, num, domain),             # marjun1999
+        "{}{}{}@{}".format(f, l2, num, domain),             # arjunme2004
+        "{}{}{}@{}".format(l, f2, num, domain),             # mehtaaj2001
+        "{}{}{}@{}".format(f2, l2, num, domain),            # ajme98
     ]
     return random.choice(templates)
 
