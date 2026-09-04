@@ -148,6 +148,11 @@ def scrape_form(viewform_url):
             entry_id = q[4][0][0]
             entry_key = "entry.{}".format(entry_id)
 
+            # Some questions have no title; treat them as empty so heuristics
+            # fall through gracefully instead of crashing on None.lower().
+            if not isinstance(q_title, str):
+                q_title = ""
+
             raw_options = q[4][0][1] or []
             options = [o[0] for o in raw_options if o and o[0]]
 
